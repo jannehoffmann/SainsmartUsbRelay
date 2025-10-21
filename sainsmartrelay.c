@@ -9,9 +9,8 @@
 
 #include "sainsmartrelay.h"
 
-
 static struct ftdi_context *ftdi;
-static uint8 g_num_relays=MAX_NUM_RELAYS;
+static uint8 g_num_relays = MAX_NUM_RELAYS;
 
 static void usage(char *myName)
 {
@@ -35,15 +34,13 @@ static void help(char *myName)
 
 static void checkPermission()
 {
-    if(geteuid() != 0)
+    if (geteuid() != 0)
     {
-        fprintf(stderr,"\nWarning:\n this program is currently not running with root priviledges !\n");
-        fprintf(stderr,"Therefore it might not be able to access your relay cards communication port.\n");
-        fprintf(stderr,"Consider invoking the program from the root account or use \"sudo ...\"\n");
+        fprintf(stderr, "\nWarning:\n this program is currently not running with root priviledges !\n");
+        fprintf(stderr, "Therefore it might not be able to access your relay cards communication port.\n");
+        fprintf(stderr, "Consider invoking the program from the root account or use \"sudo ...\"\n");
     }
 }
-
-
 
 /**********************************************************
  * Function strsplit()
@@ -56,7 +53,7 @@ static void checkPermission()
  *
  * Return:  array - response array
  *********************************************************/
-char **strsplit(const char* str, const char* delim, size_t* numtokens)
+char **strsplit(const char *str, const char *delim, size_t *numtokens)
 {
     // copy the original string so that we don't overwrite parts of it
     // (don't do this if you don't need to keep the old line,
@@ -66,17 +63,17 @@ char **strsplit(const char* str, const char* delim, size_t* numtokens)
     // implement a dynamically-growing array
     size_t tokens_alloc = 1;
     size_t tokens_used = 0;
-    char **tokens = calloc(tokens_alloc, sizeof(char*));
+    char **tokens = calloc(tokens_alloc, sizeof(char *));
     char *token, *strtok_ctx;
     for (token = strtok_r(s, delim, &strtok_ctx);
-            token != NULL;
-            token = strtok_r(NULL, delim, &strtok_ctx))
+         token != NULL;
+         token = strtok_r(NULL, delim, &strtok_ctx))
     {
         // check if we need to allocate more space for tokens
         if (tokens_used == tokens_alloc)
         {
             tokens_alloc *= 2;
-            tokens = realloc(tokens, tokens_alloc * sizeof(char*));
+            tokens = realloc(tokens, tokens_alloc * sizeof(char *));
         }
         tokens[tokens_used++] = strdup(token);
     }
@@ -88,13 +85,12 @@ char **strsplit(const char* str, const char* delim, size_t* numtokens)
     }
     else
     {
-        tokens = realloc(tokens, tokens_used * sizeof(char*));
+        tokens = realloc(tokens, tokens_used * sizeof(char *));
     }
     *numtokens = tokens_used;
     free(s);
     return tokens;
 }
-
 
 /**********************************************************
  * Function remove_duplicate()
@@ -107,23 +103,22 @@ char **strsplit(const char* str, const char* delim, size_t* numtokens)
  *
  * Return:  array - New array with deduped array content
  *********************************************************/
-int *remove_duplicate(int array[],int length, size_t* numtokens)
+int *remove_duplicate(int array[], int length, size_t *numtokens)
 {
     size_t tokens_alloc = 1;
     size_t tokens_used = 0;
-    int *tokens = calloc(tokens_alloc, sizeof(int*));
+    int *tokens = calloc(tokens_alloc, sizeof(int *));
 
-    int *current , *end = array + length - 1;
+    int *current, *end = array + length - 1;
     int flag = 0;
-    for ( current = array + 1; array < end; array++, current = array + 1 )
+    for (current = array + 1; array < end; array++, current = array + 1)
     {
         flag = 0;
-        while ( current <= end )
+        while (current <= end)
         {
-            if ( *current == *array )
+            if (*current == *array)
             {
                 *current = *end--;
-
             }
             else
             {
@@ -131,12 +126,12 @@ int *remove_duplicate(int array[],int length, size_t* numtokens)
                 current++;
             }
         }
-        if(flag == 1)
+        if (flag == 1)
         {
             if (tokens_used == tokens_alloc)
             {
                 tokens_alloc *= 1;
-                tokens = realloc(tokens, tokens_alloc * sizeof(int*));
+                tokens = realloc(tokens, tokens_alloc * sizeof(int *));
             }
 
             tokens[tokens_used++] = *array;
@@ -145,7 +140,7 @@ int *remove_duplicate(int array[],int length, size_t* numtokens)
     if (tokens_used == tokens_alloc)
     {
         tokens_alloc *= 1;
-        tokens = realloc(tokens, tokens_alloc * sizeof(int*));
+        tokens = realloc(tokens, tokens_alloc * sizeof(int *));
     }
 
     tokens[tokens_used++] = *array;
@@ -156,7 +151,7 @@ int *remove_duplicate(int array[],int length, size_t* numtokens)
     }
     else
     {
-        tokens = realloc(tokens, tokens_used * sizeof(int*));
+        tokens = realloc(tokens, tokens_used * sizeof(int *));
     }
     *numtokens = tokens_used;
     return tokens;
@@ -177,9 +172,9 @@ int *get_bits(int n, int bitswanted)
     int *bits = malloc(sizeof(int) * bitswanted);
 
     int k;
-    for(k=0; k<bitswanted; k++)
+    for (k = 0; k < bitswanted; k++)
     {
-        int mask =  1 << k;
+        int mask = 1 << k;
         int masked_n = n & mask;
         int thebit = masked_n >> k;
         bits[k] = thebit;
@@ -201,7 +196,7 @@ int *get_bits(int n, int bitswanted)
  * Return:  0 - success
  *         -1 - fail, no relay card found
  *********************************************************/
-int detect_relay_card_sainsmart_4_8chan(char* portname, uint8* num_relays)
+int detect_relay_card_sainsmart_4_8chan(char *portname, uint8 *num_relays)
 {
     unsigned int chipid;
 
@@ -212,7 +207,7 @@ int detect_relay_card_sainsmart_4_8chan(char* portname, uint8* num_relays)
     }
 
     /* Try to open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         ftdi_free(ftdi);
         return -1;
@@ -227,10 +222,10 @@ int detect_relay_card_sainsmart_4_8chan(char* portname, uint8* num_relays)
     }
 
     /* Check if this is an R type chip
-    * Type 245RL = 5000
-    */
-    //printf("relay type:%d\n",ftdi->type);
-    if (ftdi->type != 5000 && ftdi->type != TYPE_R )
+     * Type 245RL = 5000
+     */
+    // printf("relay type:%d\n",ftdi->type);
+    if (ftdi->type != 5000 && ftdi->type != TYPE_R)
     {
         fprintf(stderr, "unable to continue, not an R-type chip\n");
         ftdi_free(ftdi);
@@ -241,14 +236,14 @@ int detect_relay_card_sainsmart_4_8chan(char* portname, uint8* num_relays)
     ftdi_read_chipid(ftdi, &chipid);
 
     /* Return parameters */
-    if (num_relays!=NULL) *num_relays = g_num_relays;
+    if (num_relays != NULL)
+        *num_relays = g_num_relays;
     sprintf(portname, "FTDI chipid %X", chipid);
-    //printf("DBG: portname %s\n", portname);
+    // printf("DBG: portname %s\n", portname);
 
     ftdi_usb_close(ftdi);
     return 0;
 }
-
 
 /**********************************************************
  * Function find_device()
@@ -276,7 +271,7 @@ int find_device(void)
     if ((ret = ftdi_usb_find_all(ftdi, &devlist, 0, 0)) < 0)
     {
         fprintf(stderr, "ftdi_usb_find_all failed: %d (%s)\n", ret, ftdi_get_error_string(ftdi));
-        retval =  EXIT_FAILURE;
+        retval = EXIT_FAILURE;
         goto do_deinit;
     }
 
@@ -313,18 +308,18 @@ do_deinit:
  * Return:    0 - success
  *          < 0 - fail
  *********************************************************/
-int get_relay_sainsmart_4_8chan(uint8 relay, relay_state_t* relay_state)
+int get_relay_sainsmart_4_8chan(uint8 relay, relay_state_t *relay_state)
 {
     unsigned char buf[1];
 
-    if (relay<FIRST_RELAY || relay>(FIRST_RELAY+g_num_relays-1))
+    if (relay < FIRST_RELAY || relay > (FIRST_RELAY + g_num_relays - 1))
     {
         fprintf(stderr, "ERROR: Relay number out of range\n");
         return -1;
     }
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -334,13 +329,13 @@ int get_relay_sainsmart_4_8chan(uint8 relay, relay_state_t* relay_state)
     /* Get relay state from the card */
     if (ftdi_read_pins(ftdi, &buf[0]) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -3;
     }
-    //printf("DBG: Read GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Read GPIO bits %02X\n", buf[0]);
     int *bits = get_bits(buf[0], g_num_relays);
 
-    relay = relay-1;
+    relay = relay - 1;
     *relay_state = (bits[relay] > 0) ? ON : OFF;
 
     ftdi_usb_close(ftdi);
@@ -362,7 +357,7 @@ int get_relay_sainsmart_4_8chan_all(int *relay_states)
     unsigned char buf[1];
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -372,16 +367,16 @@ int get_relay_sainsmart_4_8chan_all(int *relay_states)
     /* Get relay state from the card */
     if (ftdi_read_pins(ftdi, &buf[0]) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -3;
     }
-    //printf("DBG: Read GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Read GPIO bits %02X\n", buf[0]);
     int *bits = get_bits(buf[0], g_num_relays);
 
     int j;
-    for(j=0; j<g_num_relays; j++)
+    for (j = 0; j < g_num_relays; j++)
     {
-        relay_states[j]= bits[j];
+        relay_states[j] = bits[j];
     }
     ftdi_usb_close(ftdi);
     return 0;
@@ -402,7 +397,7 @@ int get_relay_sainsmart_4_8chan_raw(uint8 *relay_data)
     unsigned char buf[1];
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -412,11 +407,11 @@ int get_relay_sainsmart_4_8chan_raw(uint8 *relay_data)
     /* Get relay state from the card */
     if (ftdi_read_pins(ftdi, &buf[0]) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -3;
     }
     *relay_data = buf[0];
-    //printf("DBG: Read GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Read GPIO bits %02X\n", buf[0]);
 
     ftdi_usb_close(ftdi);
     return 0;
@@ -436,14 +431,14 @@ int set_relay_sainsmart_4_8chan(uint8 relay, relay_state_t relay_state)
 {
     unsigned char buf[1];
 
-    if (relay<FIRST_RELAY || relay>(FIRST_RELAY+g_num_relays-1))
+    if (relay < FIRST_RELAY || relay > (FIRST_RELAY + g_num_relays - 1))
     {
         fprintf(stderr, "ERROR: Relay number out of range\n");
         return -1;
     }
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -453,29 +448,29 @@ int set_relay_sainsmart_4_8chan(uint8 relay, relay_state_t relay_state)
     /* Get relay state from the card */
     if (ftdi_read_pins(ftdi, buf) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -3;
     }
 
     /* Set the new relay state bit */
-    relay = relay-1;
+    relay = relay - 1;
     if (relay_state == OFF)
     {
         /* Clear the relay bit in mask */
-        buf[0] = buf[0] & ~(0x01<<relay);
+        buf[0] = buf[0] & ~(0x01 << relay);
     }
     else
     {
         /* Set the relay bit in mask */
-        buf[0] = buf[0] | (0x01<<relay);
+        buf[0] = buf[0] | (0x01 << relay);
     }
 
-    //printf("DBG: Writing GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Writing GPIO bits %02X\n", buf[0]);
 
     /* Set relay on the card */
     if (ftdi_write_data(ftdi, buf, 1) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -4;
     }
 
@@ -499,7 +494,7 @@ int set_relay_sainsmart_4_8chan_all(relay_state_t relay_state)
     int i;
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -509,7 +504,7 @@ int set_relay_sainsmart_4_8chan_all(relay_state_t relay_state)
     /* Get relay state from the card */
     if (ftdi_read_pins(ftdi, buf) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -3;
     }
 
@@ -517,30 +512,28 @@ int set_relay_sainsmart_4_8chan_all(relay_state_t relay_state)
     if (relay_state == OFF)
     {
         /* Clear all the relay state */
-        //buf[0] = 0x0;
-        for(i=1; i<= g_num_relays; i++)
+        // buf[0] = 0x0;
+        for (i = 1; i <= g_num_relays; i++)
         {
-            buf[0] = buf[0] & ~(0x01<<(i-1));
-
+            buf[0] = buf[0] & ~(0x01 << (i - 1));
         }
     }
     else
     {
         /* Set all the relay state */
-        //buf[0] = 0xFF;
-        for(i=1; i<= g_num_relays; i++)
+        // buf[0] = 0xFF;
+        for (i = 1; i <= g_num_relays; i++)
         {
-            buf[0] = buf[0] | (0x01<<(i-1));
-
+            buf[0] = buf[0] | (0x01 << (i - 1));
         }
     }
 
-    //printf("DBG: Writing GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Writing GPIO bits %02X\n", buf[0]);
 
     /* Set relay on the card */
     if (ftdi_write_data(ftdi, buf, 1) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -4;
     }
 
@@ -563,7 +556,7 @@ int set_relay_sainsmart_4_8chan_write(uint8 relay_data)
     unsigned char buf[1];
 
     /* Open FTDI USB device */
-    if ((ftdi_usb_open(ftdi, VENDOR_ID, DEVICE_ID)) < 0)
+    if (ftdi_usb_open_desc(ftdi, VENDOR_ID, DEVICE_ID, SAINSMART_FTDI_CHIP_MODEL, NULL) < 0)
     {
         fprintf(stderr, "unable to open ftdi device: (%s)\n", ftdi_get_error_string(ftdi));
         ftdi_free(ftdi);
@@ -573,12 +566,12 @@ int set_relay_sainsmart_4_8chan_write(uint8 relay_data)
     /* Set the new relay state bit */
     buf[0] = relay_data;
 
-    //printf("DBG: Writing GPIO bits %02X\n", buf[0]);
+    // printf("DBG: Writing GPIO bits %02X\n", buf[0]);
 
     /* Set relay on the card */
     if (ftdi_write_data(ftdi, buf, 1) < 0)
     {
-        fprintf(stderr,"read failed for 0x%x, error %s\n",buf[0], ftdi_get_error_string(ftdi));
+        fprintf(stderr, "read failed for 0x%x, error %s\n", buf[0], ftdi_get_error_string(ftdi));
         return -4;
     }
 
@@ -590,51 +583,50 @@ int main(int argc, char *argv[])
 {
     relay_state_t rstate;
     char com_port[MAX_COM_PORT_NAME_LEN];
-    uint8 num_relays=FIRST_RELAY;
+    uint8 num_relays = FIRST_RELAY;
     int opt;
     int long_index = 0;
     int all_check_flag = 0;
     char *op_relay_on;
     char *op_relay_off;
-    int opOn = -1,opOff = -1;
+    int opOn = -1, opOff = -1;
 
     static struct option long_options[] =
-    {
-        {"help",      no_argument,       0,  'h' },
-        {"findall", no_argument,       0,  'a' },
-        {"on",   required_argument, 0,  'o' },
-        {"off",   required_argument, 0,  'f' },
-        {"status",   required_argument, 0,  's' },
-        {0,           0,                 0,  0   }
-    };
-    if(argc < 2)
+        {
+            {"help", no_argument, 0, 'h'},
+            {"findall", no_argument, 0, 'a'},
+            {"on", required_argument, 0, 'o'},
+            {"off", required_argument, 0, 'f'},
+            {"status", required_argument, 0, 's'},
+            {0, 0, 0, 0}};
+    if (argc < 2)
     {
         fprintf(stderr, "too few arguments!\n");
         usage(argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    while ((opt = getopt_long(argc, argv,":has:o:f:",
-                              long_options, &long_index )) != -1)
+    while ((opt = getopt_long(argc, argv, ":has:o:f:",
+                              long_options, &long_index)) != -1)
     {
 
         switch (opt)
         {
-        case 'a' :
+        case 'a':
             find_device();
             exit(EXIT_SUCCESS);
             break;
-        case 'o' :
+        case 'o':
             if (detect_relay_card_sainsmart_4_8chan(com_port, &num_relays) == -1)
             {
-                fprintf(stderr,"No compatible device detected.\n");
+                fprintf(stderr, "No compatible device detected.\n");
                 checkPermission();
                 exit(EXIT_FAILURE);
             }
 
             if (strcasecmp(optarg, "all") == 0)
             {
-                if(all_check_flag == 1)
+                if (all_check_flag == 1)
                 {
                     fprintf(stderr, "invalid arguments. 'all' value is already set to --off argument\n");
                     exit(EXIT_FAILURE);
@@ -643,7 +635,7 @@ int main(int argc, char *argv[])
                 opOn = ID_ON_ALL;
                 break;
             }
-            else if(strchr(optarg, ',') == 0)
+            else if (strchr(optarg, ',') == 0)
             {
                 op_relay_on = strdup(optarg);
                 opOn = ID_ON;
@@ -656,17 +648,17 @@ int main(int argc, char *argv[])
                 break;
             }
             break;
-        case 'f' :
+        case 'f':
             if (detect_relay_card_sainsmart_4_8chan(com_port, &num_relays) == -1)
             {
-                fprintf(stderr,"No compatible device detected.\n");
+                fprintf(stderr, "No compatible device detected.\n");
                 checkPermission();
                 exit(EXIT_FAILURE);
             }
 
             if (strcasecmp(optarg, "all") == 0)
             {
-                if(all_check_flag == 1)
+                if (all_check_flag == 1)
                 {
                     fprintf(stderr, "invalid arguments. 'all' value is already set to --off argument\n");
                     exit(EXIT_FAILURE);
@@ -675,7 +667,7 @@ int main(int argc, char *argv[])
                 opOff = ID_OFF_ALL;
                 break;
             }
-            else if(strchr(optarg, ',') == 0)
+            else if (strchr(optarg, ',') == 0)
             {
                 op_relay_off = strdup(optarg);
                 opOff = ID_OFF;
@@ -688,31 +680,31 @@ int main(int argc, char *argv[])
                 break;
             }
             break;
-        case 's' :
+        case 's':
             if (detect_relay_card_sainsmart_4_8chan(com_port, &num_relays) == -1)
             {
-                fprintf(stderr,"No compatible device detected.\n");
+                fprintf(stderr, "No compatible device detected.\n");
                 checkPermission();
                 exit(EXIT_FAILURE);
             }
             if (strcasecmp(optarg, "all") == 0)
             {
-                int relay_states[g_num_relays-1];
+                int relay_states[g_num_relays - 1];
                 if (get_relay_sainsmart_4_8chan_all(relay_states) == 0)
                 {
                     int j;
-                    for(j=0; j<g_num_relays; j++)
+                    for (j = 0; j < g_num_relays; j++)
                     {
-                        fprintf(stdout, "%d: %s\n", j+1,(relay_states[j] > 0) ? "ON" : "OFF");
+                        fprintf(stdout, "%d: %s\n", j + 1, (relay_states[j] > 0) ? "ON" : "OFF");
                     }
                     exit(EXIT_SUCCESS);
                 }
             }
-            else if(isdigit(optarg[0]))
+            else if (isdigit(optarg[0]))
             {
                 if (get_relay_sainsmart_4_8chan(atoi(optarg), &rstate) == 0)
                 {
-                    fprintf(stdout, "%d: %s\n", atoi(optarg),(rstate==ON) ? "ON" : "OFF");
+                    fprintf(stdout, "%d: %s\n", atoi(optarg), (rstate == ON) ? "ON" : "OFF");
                     exit(EXIT_SUCCESS);
                 }
             }
@@ -722,12 +714,12 @@ int main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
             }
             break;
-        case 'h' :
+        case 'h':
             help(argv[0]);
             exit(EXIT_SUCCESS);
             break;
         case ':':
-            fprintf(stderr, "%s: option `-%c' requires an argument\n",argv[0], optopt);
+            fprintf(stderr, "%s: option `-%c' requires an argument\n", argv[0], optopt);
             exit(EXIT_FAILURE);
             break;
         case '?':
@@ -740,7 +732,6 @@ int main(int argc, char *argv[])
         }
     }
 
-
     char **op_relay_list = {0};
     size_t numtokens = 0;
     int i = 0;
@@ -748,8 +739,8 @@ int main(int argc, char *argv[])
     int *relays;
 
     /*
-    * Get the current status of the relay
-    */
+     * Get the current status of the relay
+     */
     uint8 relay_data;
     if (get_relay_sainsmart_4_8chan_raw(&relay_data) != 0)
     {
@@ -757,23 +748,22 @@ int main(int argc, char *argv[])
     }
 
     /*
-    * Process all the multiple relay ON state operation
-    */
+     * Process all the multiple relay ON state operation
+     */
 
-    if(opOn == ID_ON_ALL)
+    if (opOn == ID_ON_ALL)
     {
-        for(i=1; i<= g_num_relays; i++)
+        for (i = 1; i <= g_num_relays; i++)
         {
-            relay_data = relay_data | (0x01<<(i-1));
-
+            relay_data = relay_data | (0x01 << (i - 1));
         }
     }
-    else if(opOn == ID_ON)
+    else if (opOn == ID_ON)
     {
 
-        relay_data = relay_data | (0x01<<(atoi(op_relay_on)-1));
+        relay_data = relay_data | (0x01 << (atoi(op_relay_on) - 1));
     }
-    else if(opOn == ID_ON_MULTIPLE)
+    else if (opOn == ID_ON_MULTIPLE)
     {
 
         op_relay_list = strsplit(op_relay_on, ", \t\n", &numtokens);
@@ -783,37 +773,33 @@ int main(int argc, char *argv[])
             relay_list[i] = atoi(strdup(op_relay_list[i]));
             free(op_relay_list[i]);
         }
-        relays = remove_duplicate(relay_list,numtokens,&numtok);
+        relays = remove_duplicate(relay_list, numtokens, &numtok);
 
-        for(i=0; i< numtok; i++)
+        for (i = 0; i < numtok; i++)
         {
-            if(relays[i] != 0)
+            if (relays[i] != 0)
             {
-                relay_data = relay_data | (0x01<<(relays[i]-1));
+                relay_data = relay_data | (0x01 << (relays[i] - 1));
             }
-
         }
-
-
     }
 
     /*
-    * Process all the multiple relay OFF state operation
-    */
-    if(opOff == ID_OFF_ALL)
+     * Process all the multiple relay OFF state operation
+     */
+    if (opOff == ID_OFF_ALL)
     {
-        for(i=1; i<= g_num_relays; i++)
+        for (i = 1; i <= g_num_relays; i++)
         {
-            relay_data = relay_data & ~(0x01<<(i-1));
-
+            relay_data = relay_data & ~(0x01 << (i - 1));
         }
     }
-    else if(opOff == ID_OFF)
+    else if (opOff == ID_OFF)
     {
 
-        relay_data = relay_data & ~(0x01<<(atoi(op_relay_off)-1));
+        relay_data = relay_data & ~(0x01 << (atoi(op_relay_off) - 1));
     }
-    else if(opOff == ID_OFF_MULTIPLE)
+    else if (opOff == ID_OFF_MULTIPLE)
     {
         op_relay_list = strsplit(op_relay_off, ", \t\n", &numtokens);
         int relay_list[numtokens];
@@ -822,31 +808,31 @@ int main(int argc, char *argv[])
             relay_list[i] = atoi(strdup(op_relay_list[i]));
             free(op_relay_list[i]);
         }
-        relays = remove_duplicate(relay_list,numtokens,&numtok);
+        relays = remove_duplicate(relay_list, numtokens, &numtok);
 
-        for(i=0; i< numtok; i++)
+        for (i = 0; i < numtok; i++)
         {
-            if(relays[i] != 0)
+            if (relays[i] != 0)
             {
-                relay_data = relay_data & ~(0x01<<(relays[i]-1));
+                relay_data = relay_data & ~(0x01 << (relays[i] - 1));
             }
         }
     }
 
     /*
-    * Write the final state data into the relay
-    */
-    if(opOn != -1 || opOff != -1)
+     * Write the final state data into the relay
+     */
+    if (opOn != -1 || opOff != -1)
     {
         if (set_relay_sainsmart_4_8chan_write(relay_data) == 0)
         {
-            int relay_states[g_num_relays-1];
+            int relay_states[g_num_relays - 1];
             if (get_relay_sainsmart_4_8chan_all(relay_states) == 0)
             {
                 int j;
-                for(j=0; j<g_num_relays; j++)
+                for (j = 0; j < g_num_relays; j++)
                 {
-                    fprintf(stdout, "%d: %s\n", j+1,(relay_states[j] > 0) ? "ON" : "OFF");
+                    fprintf(stdout, "%d: %s\n", j + 1, (relay_states[j] > 0) ? "ON" : "OFF");
                 }
                 exit(EXIT_SUCCESS);
             }
@@ -856,9 +842,6 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Error writing data to the relay.\n");
             exit(EXIT_FAILURE);
         }
-
-
     }
     exit(EXIT_SUCCESS);
 }
-
